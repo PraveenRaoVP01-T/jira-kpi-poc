@@ -1,0 +1,31 @@
+spring:
+  profiles:
+    active: test
+  application:
+    name: jira-kpi-service
+    is-test: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vendor_analytics
+    username: postgres
+    password: root
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+
+jira:
+  base-url: https://your-company.atlassian.net
+  username: praveen.kumar@company.com
+  token: xufu               # from environment
+  project-keys: PROJ1,PROJ2,PROJ3
+  vendor-custom-field: customfield_12345   # "Vendor Name"
+
+elastic:
+  host: localhost
+  port: 9200
+
+scheduler:
+  full-sync-cron: "0 2 * * SAT"      # weekly full refresh
+  incremental-cron: "0 */30 * * * *" # every 30 min
+  kpi-calc-cron: "0 4 * * *"         # 4 AM daily

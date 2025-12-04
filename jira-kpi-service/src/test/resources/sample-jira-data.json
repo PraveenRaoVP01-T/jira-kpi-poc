@@ -1,0 +1,46 @@
+[
+  {
+    "key": "VEND-101",
+    "fields": {
+      "project": { "key": "VEND" },
+      "issuetype": { "name": "Story" },
+      "summary": "Login page redesign",
+      "status": { "name": "Done" },
+      "created": "2025-03-01T10:00:00.000+0000",
+      "resolutiondate": "2025-03-10T14:30:00.000+0000",
+      "customfield_12345": { "value": "Acme Corp" },
+      "customfield_10016": 8,
+      "labels": []
+    },
+    "changelog": {
+      "histories": [
+        {
+          "created": "2025-03-02T09:00:00.000+0000",
+          "items": [{ "field": "status", "fromString": "To Do", "toString": "In Progress" }]
+        },
+        {
+          "created": "2025-03-05T11:00:00.000+0000",
+          "items": [{ "field": "status", "fromString": "In Progress", "toString": "Code Review" }]
+        },
+        {
+          "created": "2025-03-08T15:00:00.000+0000",
+          "items": [{ "field": "status", "fromString": "Code Review", "toString": "Done" }]
+        }
+      ]
+    }
+  },
+  {
+    "key": "VEND-102",
+    "fields": {
+      "project": { "key": "VEND" },
+      "issuetype": { "name": "Bug" },
+      "summary": "Null pointer in checkout",
+      "status": { "name": "Done" },
+      "created": "2025-03-15T08:00:00.000+0000",
+      "resolutiondate": "2025-03-18T16:00:00.000+0000",
+      "customfield_12345": { "value": "Beta Systems" },
+      "labels": ["production"]
+    },
+    "changelog": { "histories": [] }
+  }
+]
