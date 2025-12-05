@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.ArrayList;
@@ -67,7 +68,7 @@ public class JiraSyncService {
                 project IN (%s)
                 """.formatted(String.join(",", jiraProjectKeys));
 
-        List<JsonNode> rawIssues = jiraClient.searchIssues(BASE_JQL, LocalDateTime.of(LocalDate.of(2025,12,3), LocalTime.MIDNIGHT).toInstant(ZoneOffset.UTC));
+        List<JsonNode> rawIssues = jiraClient.searchIssues(BASE_JQL, updatedAfter);
         log.info("Fetched data....");
         var counter = new AtomicInteger(0);
 
@@ -253,8 +254,13 @@ public class JiraSyncService {
     }
 
     private Instant toInstant(JsonNode node) {
-        if (node.isMissingNode() || node.isNull()) return null;
-        return Instant.parse(node.asText());
+        try {
+            if (node.isMissingNode() || node.isNull()) return null;
+            return Instant.parse(node.asText());
+        } catch (DateTimeParseException e) {
+            log.error("error parsing date time");
+            return Instant.now();
+        }
     }
 
     private Vendor createOrGetVendor(String name) {

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -82,7 +83,11 @@ public class JiraClient implements IJiraClient {
 
         log.info("Completed Jira sync: {} issues fetched", allIssues.size());
         log.info("Is Error there in processing object mapper????");
-        return objectMapper.convertValue(allIssues, ArrayList.class);
+        JsonNode node =  objectMapper.valueToTree(allIssues);
+
+        List<JsonNode> jsonNode = new ArrayList<>();
+        node.forEach(jsonNode::add);
+        return jsonNode;
     }
 
     private SearchResponse searchPage(String jql, int startAt, int maxResults, String nextPageToken) {
