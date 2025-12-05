@@ -68,13 +68,12 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/vendor_analytics
       - SPRING_DATASOURCE_USERNAME=analytics
       - SPRING_DATASOURCE_PASSWORD=secret123
-      - JIRA_BASE_URL=https://your-company.atlassian.net
-      - JIRA_USERNAME=you@company.com
-      - JIRA_TOKEN=xyz          # pass from host or .env
       - ELASTIC_HOST=elasticsearch
       - ELASTIC_PORT=9200
       - LOGGING_LEVEL_COM_COMPANY=INFO

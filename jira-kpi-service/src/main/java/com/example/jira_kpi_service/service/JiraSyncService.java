@@ -18,8 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -44,7 +45,6 @@ public class JiraSyncService {
     private String jiraProjectKeys;
 
 
-
     @Transactional
     public void performFullSync() {
         log.info("Starting FULL Jira sync...");
@@ -58,14 +58,17 @@ public class JiraSyncService {
     }
 
     private void syncInternal(Instant updatedAfter) {
-        // Base JQL — modify once, works for all vendors
+//        String BASE_JQL = """
+//        project IN (%s)
+//        AND issuetype IN (Story, Task, Bug, Sub-task, Epic)
+//        AND statusCategory IN (Done, "In Progress")
+//        """.formatted(String.join(",",  jiraProjectKeys));
         String BASE_JQL = """
-        project IN (%s) 
-        AND issuetype IN (Story, Task, Bug, Sub-task, Epic)
-        AND statusCategory IN (Done, "In Progress")
-        """.formatted(String.join(",",  jiraProjectKeys));
+                project IN (%s)
+                """.formatted(String.join(",", jiraProjectKeys));
 
-        var rawIssues = jiraClient.searchIssues(BASE_JQL, updatedAfter);
+        List<JsonNode> rawIssues = jiraClient.searchIssues(BASE_JQL, LocalDateTime.of(LocalDate.of(2025,12,3), LocalTime.MIDNIGHT).toInstant(ZoneOffset.UTC));
+        log.info("Fetched data....");
         var counter = new AtomicInteger(0);
 
         rawIssues.forEach(rawIssue -> {

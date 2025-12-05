@@ -15,10 +15,10 @@ spring:
       ddl-auto: update
 
 jira:
-  base-url: https://your-company.atlassian.net
-  username: praveen.kumar@company.com
-  token: xufu               # from environment
-  project-keys: PROJ1,PROJ2,PROJ3
+  base-url: ${{ JIRA_BASE-URL }}
+  username: ${{ JIRA_USERNAME }}
+  token: ${{ JIRA_TOKEN }}
+  project-keys: PROJ1,PROJ2,PROJ3,SCRUM-1
   vendor-custom-field: customfield_12345   # "Vendor Name"
 
 elastic:
@@ -27,5 +27,5 @@ elastic:
 
 scheduler:
   full-sync-cron: "0 2 * * SAT"      # weekly full refresh
-  incremental-cron: "0 */30 * * * *" # every 30 min
+  incremental-cron: "0 */1 * * * *" # every 30 min
   kpi-calc-cron: "0 4 * * *"         # 4 AM daily

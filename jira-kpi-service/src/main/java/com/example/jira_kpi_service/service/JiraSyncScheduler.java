@@ -3,6 +3,7 @@ package com.example.jira_kpi_service.service;
 import com.example.jira_kpi_service.entity.SyncMetadata;
 import com.example.jira_kpi_service.repository.SyncMetadataRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JiraSyncScheduler {
 
     private final JiraSyncService jiraSyncService;
@@ -20,6 +22,7 @@ public class JiraSyncScheduler {
 
     @Scheduled(cron = "${scheduler.incremental-cron}")  // every 30 min
     public void incrementalSync() {
+        log.info("Syncing...");
         SyncMetadata syncMetadata = metadataRepo.getLastIncrementalSync();
         Instant last = syncMetadata == null ? null : syncMetadata.getLastIncrementalSyncedAt();
         jiraSyncService.performIncrementalSync(last);
