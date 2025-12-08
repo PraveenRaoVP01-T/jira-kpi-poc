@@ -5,13 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-import tools.jackson.databind.node.ArrayNode;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -39,8 +37,8 @@ public class JiraClient implements IJiraClient {
             "created", "updated", "resolutiondate", "duedate", "resolution",
             "project", "labels", "storypoints", "epic", "sprint");
 
-//    private static final String EXPAND = "changelog,schema,names";
-    private static final String EXPAND = "";
+    private static final String EXPAND = "changelog,schema,names";
+//    private static final String EXPAND = "";
 
     /**
      * Full incremental sync using JQL with pagination
@@ -135,6 +133,8 @@ public class JiraClient implements IJiraClient {
 
         String nextPageToken = null;
         List<Map<String, Object>> issues;
+        JsonNode names;
+        JsonNode schema;
 
         Boolean isLast;
         @Override
