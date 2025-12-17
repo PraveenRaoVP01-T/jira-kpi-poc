@@ -33,7 +33,7 @@ public class JiraSyncScheduler {
         metadataRepo.save(syncMetadata);
     }
 
-    @Scheduled(cron = "0 2 * * * SAT")  // weekly full re-sync
+    @Scheduled(cron = "${scheduler.full-sync-cron}")  // weekly full re-sync
     public void weeklyFullSync() {
         jiraSyncService.performFullSync();
         SyncMetadata syncMetadata = metadataRepo.getLastIncrementalSync();

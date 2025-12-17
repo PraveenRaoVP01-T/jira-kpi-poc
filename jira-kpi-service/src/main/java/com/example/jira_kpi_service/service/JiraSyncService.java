@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -37,9 +38,6 @@ public class JiraSyncService {
     private final JiraIssueRepository jiraIssueRepository;
     private final IssueStatusHistoryRepository statusHistoryRepository;
     private final VendorRepository vendorRepository;
-
-    @Value("${jira.vendor-custom-field}")
-    private final String vendorCustomFieldId;
 
     @Value("${jira.project-keys:PROJ1,PROJ2}")
     private String jiraProjectKeys;
@@ -98,7 +96,8 @@ public class JiraSyncService {
     }
 
     private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload) {
-        JiraRaw raw = new JiraRaw();
+        JiraRaw raw = jiraRawRepository.findByIssueKey(issueKey)
+                .orElse(new JiraRaw());
         raw.setIssueKey(issueKey);
         raw.setPayload(payload);
         raw.setFetchedAt(Instant.now());
@@ -133,9 +132,7 @@ public class JiraSyncService {
         }
 
         // Vendor extraction
-        JsonNode vendorNode = fields.path(vendorCustomFieldId);
-        String vendorName = vendorNode.isTextual() ? vendorNode.asText() :
-                vendorNode.path("value").asText(null);
+        String vendorName = "Vendor";
 
         Vendor vendor = vendorName != null ?
                 vendorRepository.findByNameIgnoreCase(vendorName)
@@ -255,7 +252,11 @@ public class JiraSyncService {
     private Instant toInstant(JsonNode node) {
         try {
             if (node.isMissingNode() || node.isNull()) return null;
-            return Instant.parse(node.asText());
+//            return Instant.parse(node.asText());
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
+            return OffsetDateTime.parse(node.asText(), formatter).toInstant();
         } catch (DateTimeParseException e) {
             log.error("error parsing date time");
             return Instant.now();

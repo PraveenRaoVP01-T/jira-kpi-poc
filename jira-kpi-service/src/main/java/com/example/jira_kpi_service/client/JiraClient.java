@@ -13,6 +13,8 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +29,7 @@ public class JiraClient implements IJiraClient {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private static final int MAX_RESULTS = 100;
+    private static final int MAX_RESULTS = 5;
     private static final String SEARCH_ENDPOINT = "/rest/api/3/search/jql";
     private static final String ISSUE_ENDPOINT = "/rest/api/3/issue/{issueKey}";
 
@@ -38,17 +40,21 @@ public class JiraClient implements IJiraClient {
             "project", "labels", "storypoints", "epic", "sprint");
 
     private static final String EXPAND = "changelog,schema,names";
-//    private static final String EXPAND = "";
 
     /**
      * Full incremental sync using JQL with pagination
      */
     public List<JsonNode> searchIssues(String jql, Instant updatedAfter) {
-        String finalJql = updatedAfter != null
-                ? "(" + jql + ") AND updated >= \"" + updatedAfter.atZone(java.time.ZoneOffset.UTC).toLocalDate() + "\""
+        String formattedUpdatedAfter = null;
+        if(updatedAfter != null) {
+            formattedUpdatedAfter = toJqlTimeFormat(updatedAfter);
+        }
+
+        String finalJql = formattedUpdatedAfter != null
+                ? "(" + jql + ") AND updated >= \"" + formattedUpdatedAfter + "\""
                 : jql;
 
-        log.info("Starting Jira search with JQL: {} & fields: {}", finalJql, FIELDS);
+        log.info("Starting Jira search with JQL: {} & fields: {} & expand: {}", finalJql, FIELDS, EXPAND);
 
         List<Map<String, Object>> allIssues = new ArrayList<>();
         int startAt = 0;
@@ -80,12 +86,20 @@ public class JiraClient implements IJiraClient {
         } while(!isLast);
 
         log.info("Completed Jira sync: {} issues fetched", allIssues.size());
-        log.info("Is Error there in processing object mapper????");
         JsonNode node =  objectMapper.valueToTree(allIssues);
 
         List<JsonNode> jsonNode = new ArrayList<>();
         node.forEach(jsonNode::add);
         return jsonNode;
+    }
+
+    private String toJqlTimeFormat(Instant updatedAfter) {
+        DateTimeFormatter JQL_FORMAT =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return updatedAfter
+//                .atZone(ZoneId.of("Asia/Kolkata"))
+                .atZone(ZoneId.systemDefault())
+                .format(JQL_FORMAT);
     }
 
     private SearchResponse searchPage(String jql, int startAt, int maxResults, String nextPageToken) {
