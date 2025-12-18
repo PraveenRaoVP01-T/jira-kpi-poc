@@ -1,14 +1,8 @@
 package com.example.jira_kpi_service.service;
 
 import com.example.jira_kpi_service.client.JiraClient;
-import com.example.jira_kpi_service.entity.IssueStatusHistory;
-import com.example.jira_kpi_service.entity.JiraIssue;
-import com.example.jira_kpi_service.entity.JiraRaw;
-import com.example.jira_kpi_service.entity.Vendor;
-import com.example.jira_kpi_service.repository.IssueStatusHistoryRepository;
-import com.example.jira_kpi_service.repository.JiraIssueRepository;
-import com.example.jira_kpi_service.repository.JiraRawRepository;
-import com.example.jira_kpi_service.repository.VendorRepository;
+import com.example.jira_kpi_service.entity.*;
+import com.example.jira_kpi_service.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +32,7 @@ public class JiraSyncService {
     private final JiraIssueRepository jiraIssueRepository;
     private final IssueStatusHistoryRepository statusHistoryRepository;
     private final VendorRepository vendorRepository;
+    private final IssueWorklogRepository issueWorklogRepository;
 
     @Value("${jira.project-keys:PROJ1,PROJ2}")
     private String jiraProjectKeys;
@@ -75,11 +70,22 @@ public class JiraSyncService {
                 JsonNode fields = rawIssue;
 
                 // 1. Save raw payload (immutable audit trail)
-                JiraRaw jiraRaw = saveRawPayload(issueKey, rawIssue);
+                JiraRaw jiraRaw = saveRawPayload(issueKey, rawIssue, "GET_ISSUE");
 
                 // 2. Normalize + upsert issue
                 JiraIssue jiraIssue = normalizeIssue(issueKey, fields, jiraRaw.getId());
                 jiraIssue = jiraIssueRepository.save(jiraIssue);
+
+                List<IssueWorklog> issueWorklogs = jiraClient.getWorklogsForIssueAsEntities(jiraIssue);
+                JsonNode rawResponse = null;
+                if(!issueWorklogs.isEmpty()) {
+                    rawResponse = issueWorklogs.getFirst().getRawResponse();
+                    issueWorklogRepository.saveAll(issueWorklogs);
+                }
+                if(rawResponse != null) {
+                    JiraRaw jiraRawWorklog = saveRawPayload(issueKey, rawResponse, "GET_ISSUE_WORKLOG");
+                }
+
 
                 // 3. Extract and save status history + compute times
                 extractAndSaveStatusHistory(jiraIssue, fields.path("changelog"));
@@ -95,11 +101,12 @@ public class JiraSyncService {
         log.info("Jira sync completed: {} issues processed", counter.get());
     }
 
-    private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload) {
-        JiraRaw raw = jiraRawRepository.findByIssueKey(issueKey)
+    private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload, String fetchType) {
+        JiraRaw raw = jiraRawRepository.findByIssueKeyAndFetchType(issueKey, fetchType)
                 .orElse(new JiraRaw());
         raw.setIssueKey(issueKey);
         raw.setPayload(payload);
+        raw.setFetchType(fetchType);
         raw.setFetchedAt(Instant.now());
         return jiraRawRepository.save(raw);
     }
@@ -258,8 +265,13 @@ public class JiraSyncService {
 
             return OffsetDateTime.parse(node.asText(), formatter).toInstant();
         } catch (DateTimeParseException e) {
-            log.error("error parsing date time");
-            return Instant.now();
+            log.error("error parsing date time: {}", e.getMessage());
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-Mm-dd");
+                return OffsetDateTime.parse(node.asText(), formatter).toInstant();
+            } catch (DateTimeParseException ex) {
+                return Instant.now();
+            }
         }
     }
 

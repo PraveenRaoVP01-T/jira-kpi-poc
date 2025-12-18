@@ -28,6 +28,9 @@ public class JiraRaw {
     @Column(columnDefinition = "JSONB", nullable = false)
     private JsonNode payload;
 
+    @Column(name = "fetch_type")
+    private String fetchType = "GET_ISSUES"; // GET_ISSUES or GET_ISSUE_WORKLOG
+
     @Column(name = "fetched_at", nullable = false)
     private Instant fetchedAt = Instant.now();
 

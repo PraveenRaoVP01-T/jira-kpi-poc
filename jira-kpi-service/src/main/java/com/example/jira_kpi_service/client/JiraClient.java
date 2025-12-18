@@ -1,5 +1,8 @@
 package com.example.jira_kpi_service.client;
 
+import com.example.jira_kpi_service.entity.IssueWorklog;
+import com.example.jira_kpi_service.entity.JiraIssue;
+import com.example.jira_kpi_service.model.WorklogResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
@@ -11,13 +14,14 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -32,6 +36,7 @@ public class JiraClient implements IJiraClient {
     private static final int MAX_RESULTS = 5;
     private static final String SEARCH_ENDPOINT = "/rest/api/3/search/jql";
     private static final String ISSUE_ENDPOINT = "/rest/api/3/issue/{issueKey}";
+    private static final String ISSUE_WORKLOG_ENDPOINT = "/rest/api/3/issue/{issueKey}/worklog";
 
     // Fields we always need for KPIs
     private static final String FIELDS = String.join(",",
@@ -49,6 +54,9 @@ public class JiraClient implements IJiraClient {
         if(updatedAfter != null) {
             formattedUpdatedAfter = toJqlTimeFormat(updatedAfter);
         }
+//        else {
+//            formattedUpdatedAfter = toJqlTimeFormat(Instant.now().minus(3, ChronoUnit.DAYS));
+//        }
 
         String finalJql = formattedUpdatedAfter != null
                 ? "(" + jql + ") AND updated >= \"" + formattedUpdatedAfter + "\""
@@ -81,7 +89,7 @@ public class JiraClient implements IJiraClient {
                 allIssues.add(fullIssue);
             });
             if(!isLast) {
-                log.info("Fetched {}/{} issues...", allIssues.size(), total);
+                log.info("Fetched {} issues...", allIssues.size());
             }
         } while(!isLast);
 
@@ -94,13 +102,82 @@ public class JiraClient implements IJiraClient {
     }
 
     private String toJqlTimeFormat(Instant updatedAfter) {
+        log.info("Updated After: {}", updatedAfter);
         DateTimeFormatter JQL_FORMAT =
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return updatedAfter
-//                .atZone(ZoneId.of("Asia/Kolkata"))
                 .atZone(ZoneId.systemDefault())
                 .format(JQL_FORMAT);
     }
+
+    public List<IssueWorklog> getWorklogsForIssueAsEntities(JiraIssue jiraIssue) {
+        String url = ISSUE_WORKLOG_ENDPOINT.replace("{issueKey}", jiraIssue.getIssueKey());
+
+        String rawResponse = jiraWebClient.get()
+                .uri(url)
+                .retrieve()
+                .onStatus(HttpStatus.NOT_FOUND::equals, res -> Mono.empty())
+                .onStatus(HttpStatus.TOO_MANY_REQUESTS::equals, res ->
+                        Mono.error(new RuntimeException("Rate limited")))
+                .bodyToMono(String.class)
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
+                .block(Duration.ofSeconds(30));
+
+        WorklogResponse response = null;
+
+        try {
+            response = objectMapper.readValue(rawResponse, WorklogResponse.class);
+        } catch (Exception e) {
+            log.error("Error while parsing worklogresponse: {}", e.getMessage());
+        }
+
+        if (response == null || response.getWorklogs() == null) {
+            return List.of();
+        }
+
+        response.setRawJson(objectMapper.valueToTree(rawResponse));
+
+        WorklogResponse finalResponse = response;
+        return response.getWorklogs().stream()
+                .map(res -> {
+                    IssueWorklog worklog = mapToIssueWorklog(res, jiraIssue);
+                    worklog.setRawResponse(finalResponse.getRawJson());
+                    return worklog;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private IssueWorklog mapToIssueWorklog(WorklogResponse.Worklogs wl, JiraIssue jiraIssue) {
+        return IssueWorklog.builder()
+                .issueKey(jiraIssue.getIssueKey())
+                .timeSpent(wl.getTimeSpent())
+                .jiraIssue(jiraIssue)
+                .timeSpentSeconds(wl.getTimeSpentSeconds())
+                .created(parseDateTime(wl.getCreated()))
+                .updated(parseDateTime(wl.getUpdated()))
+                .started(parseDateTime(wl.getStarted()))
+                .author(objectMapper.valueToTree(wl.getAuthor()))
+                .updateAuthor(objectMapper.valueToTree(wl.getUpdateAuthor()))
+                .build();
+    }
+
+    private OffsetDateTime parseDateTime(String dateTimeStr) {
+        if (dateTimeStr == null || dateTimeStr.isBlank()) {
+            return null;
+        }
+
+        try {
+            DateTimeFormatter OFFSET_FORMATTER =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+            return OffsetDateTime.parse(dateTimeStr, OFFSET_FORMATTER);
+        } catch (DateTimeParseException e) {
+            log.warn("Failed to parse Jira timestamp: '{}'. Falling back to LocalDateTime.", dateTimeStr);
+            return LocalDateTime.parse(dateTimeStr,
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ"))
+                    .atOffset(ZoneOffset.UTC);
+        }
+    }
+
 
     private SearchResponse searchPage(String jql, int startAt, int maxResults, String nextPageToken) {
 
@@ -137,6 +214,8 @@ public class JiraClient implements IJiraClient {
             throw new RuntimeException("Invalid Jira response", e);
         }
     }
+
+
 
     // Inner response classes
     @Data

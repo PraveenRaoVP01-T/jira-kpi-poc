@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface JiraRawRepository extends JpaRepository<JiraRaw, Long> {
     Optional<JiraRaw> findByIssueKey(String issueKey);
+
+    Optional<JiraRaw> findByIssueKeyAndFetchType(String issueKey, String fetchType);
 }
