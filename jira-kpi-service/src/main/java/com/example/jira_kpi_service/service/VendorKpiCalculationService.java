@@ -35,7 +35,7 @@ public class VendorKpiCalculationService {
     private final ElasticsearchIndexingService esService;
 
     // Run every day at 4:30 AM → after incremental sync
-    @Scheduled(cron = "0 30 4 * * *")
+    @Scheduled(cron = "${scheduler.kpi-calc-cron}")
     @Transactional
     public void calculateDailyKpis() throws IOException {
         LocalDate yesterday = LocalDate.now().minusDays(1);
@@ -69,7 +69,7 @@ public class VendorKpiCalculationService {
 
             if (completedIssues.isEmpty()) {
                 vendorKpiRepository.upsert(kpi); // zero metrics
-                esService.indexVendorKpi(kpi);
+//                esService.indexVendorKpi(kpi);
                 continue;
             }
 
@@ -129,7 +129,7 @@ public class VendorKpiCalculationService {
 
             // Save + index
             vendorKpiRepository.upsert(kpi);
-            esService.indexVendorKpi(kpi);
+//            esService.indexVendorKpi(kpi);
 
             log.info("KPI calculated for vendor {} on {}: {} issues, lead time {} days",
                     vendorId, periodDate, kpi.getIssuesCompleted(),

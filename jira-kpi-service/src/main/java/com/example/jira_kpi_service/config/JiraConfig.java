@@ -38,9 +38,4 @@ public class JiraConfig {
     public String[] jiraProjectKeysArray() {
         return projectKeys.isBlank() ? new String[0] : projectKeys.split("\\s*,\\s*");
     }
-
-    @Bean
-    public String jiraVendorCustomFieldId() {
-        return vendorCustomFieldId;
-    }
 }

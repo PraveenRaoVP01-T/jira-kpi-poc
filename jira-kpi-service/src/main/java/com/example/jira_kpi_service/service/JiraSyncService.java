@@ -1,14 +1,8 @@
 package com.example.jira_kpi_service.service;
 
 import com.example.jira_kpi_service.client.JiraClient;
-import com.example.jira_kpi_service.entity.IssueStatusHistory;
-import com.example.jira_kpi_service.entity.JiraIssue;
-import com.example.jira_kpi_service.entity.JiraRaw;
-import com.example.jira_kpi_service.entity.Vendor;
-import com.example.jira_kpi_service.repository.IssueStatusHistoryRepository;
-import com.example.jira_kpi_service.repository.JiraIssueRepository;
-import com.example.jira_kpi_service.repository.JiraRawRepository;
-import com.example.jira_kpi_service.repository.VendorRepository;
+import com.example.jira_kpi_service.entity.*;
+import com.example.jira_kpi_service.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +13,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,9 +32,7 @@ public class JiraSyncService {
     private final JiraIssueRepository jiraIssueRepository;
     private final IssueStatusHistoryRepository statusHistoryRepository;
     private final VendorRepository vendorRepository;
-
-    @Value("${jira.vendor-custom-field}")
-    private final String vendorCustomFieldId;
+    private final IssueWorklogRepository issueWorklogRepository;
 
     @Value("${jira.project-keys:PROJ1,PROJ2}")
     private String jiraProjectKeys;
@@ -78,11 +70,22 @@ public class JiraSyncService {
                 JsonNode fields = rawIssue;
 
                 // 1. Save raw payload (immutable audit trail)
-                JiraRaw jiraRaw = saveRawPayload(issueKey, rawIssue);
+                JiraRaw jiraRaw = saveRawPayload(issueKey, rawIssue, "GET_ISSUE");
 
                 // 2. Normalize + upsert issue
                 JiraIssue jiraIssue = normalizeIssue(issueKey, fields, jiraRaw.getId());
                 jiraIssue = jiraIssueRepository.save(jiraIssue);
+
+                List<IssueWorklog> issueWorklogs = jiraClient.getWorklogsForIssueAsEntities(jiraIssue);
+                JsonNode rawResponse = null;
+                if(!issueWorklogs.isEmpty()) {
+                    rawResponse = issueWorklogs.getFirst().getRawResponse();
+                    issueWorklogRepository.saveAll(issueWorklogs);
+                }
+                if(rawResponse != null) {
+                    JiraRaw jiraRawWorklog = saveRawPayload(issueKey, rawResponse, "GET_ISSUE_WORKLOG");
+                }
+
 
                 // 3. Extract and save status history + compute times
                 extractAndSaveStatusHistory(jiraIssue, fields.path("changelog"));
@@ -98,10 +101,12 @@ public class JiraSyncService {
         log.info("Jira sync completed: {} issues processed", counter.get());
     }
 
-    private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload) {
-        JiraRaw raw = new JiraRaw();
+    private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload, String fetchType) {
+        JiraRaw raw = jiraRawRepository.findByIssueKeyAndFetchType(issueKey, fetchType)
+                .orElse(new JiraRaw());
         raw.setIssueKey(issueKey);
         raw.setPayload(payload);
+        raw.setFetchType(fetchType);
         raw.setFetchedAt(Instant.now());
         return jiraRawRepository.save(raw);
     }
@@ -134,9 +139,7 @@ public class JiraSyncService {
         }
 
         // Vendor extraction
-        JsonNode vendorNode = fields.path(vendorCustomFieldId);
-        String vendorName = vendorNode.isTextual() ? vendorNode.asText() :
-                vendorNode.path("value").asText(null);
+        String vendorName = "Vendor";
 
         Vendor vendor = vendorName != null ?
                 vendorRepository.findByNameIgnoreCase(vendorName)
@@ -256,10 +259,19 @@ public class JiraSyncService {
     private Instant toInstant(JsonNode node) {
         try {
             if (node.isMissingNode() || node.isNull()) return null;
-            return Instant.parse(node.asText());
+//            return Instant.parse(node.asText());
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
+            return OffsetDateTime.parse(node.asText(), formatter).toInstant();
         } catch (DateTimeParseException e) {
-            log.error("error parsing date time");
-            return Instant.now();
+            log.error("error parsing date time: {}", e.getMessage());
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-Mm-dd");
+                return OffsetDateTime.parse(node.asText(), formatter).toInstant();
+            } catch (DateTimeParseException ex) {
+                return Instant.now();
+            }
         }
     }
 

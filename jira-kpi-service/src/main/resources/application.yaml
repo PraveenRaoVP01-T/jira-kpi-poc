@@ -13,19 +13,22 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: update
+  http:
+    codecs:
+      max-in-memory-size: 10MB # TODO: need to research how to handle many data
+  codec:
+    max-in-memory-size: 10MB
 
 jira:
   base-url: ${{ JIRA_BASE-URL }}
   username: ${{ JIRA_USERNAME }}
   token: ${{ JIRA_TOKEN }}
-  project-keys: PROJ1,PROJ2,PROJ3,SCRUM-1
-  vendor-custom-field: customfield_12345   # "Vendor Name"
-
+  project-keys: ${{ JIRA_PROJECT-KEYS }}
 elastic:
   host: localhost
   port: 9200
 
 scheduler:
-  full-sync-cron: "0 2 * * SAT"      # weekly full refresh
+  full-sync-cron: "0 2 * * * SAT"      # weekly full refresh
   incremental-cron: "0 */1 * * * *" # every 30 min
-  kpi-calc-cron: "0 4 * * *"         # 4 AM daily
+  kpi-calc-cron: "0 4 * * * *"         # 4 AM daily
