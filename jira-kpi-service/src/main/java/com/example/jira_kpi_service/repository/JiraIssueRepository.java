@@ -1,6 +1,7 @@
 package com.example.jira_kpi_service.repository;
 
 import com.example.jira_kpi_service.entity.JiraIssue;
+import com.example.jira_kpi_service.model.GroupWeekIssueDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,4 +37,29 @@ public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long> {
 
     @Query("SELECT COUNT(i) FROM JiraIssue i WHERE i.vendor.id = :vendorId AND i.status NOT IN ('Done', 'Closed')")
     Long countCurrentWipByVendor(@Param("vendorId") UUID vendorId);
+
+
+
+
+
+    @Query("""
+        SELECT new com.example.jira_kpi_service.model.GroupWeekIssueDTO(
+            u.groupName,
+            (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1,
+            COUNT(DISTINCT i.id)
+        )
+        FROM JiraIssue i
+        JOIN IssueWorklog w ON w.jiraIssue = i
+        JOIN Users u ON w.user = u
+        WHERE i.resolutionDate >= :start
+          AND i.resolutionDate < :end
+        GROUP BY u.groupName, (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1
+    """)
+    List<GroupWeekIssueDTO> getIssueCountsPerGroupPerWeek(
+            Instant start,
+            Instant end
+    );
+
+
+
 }

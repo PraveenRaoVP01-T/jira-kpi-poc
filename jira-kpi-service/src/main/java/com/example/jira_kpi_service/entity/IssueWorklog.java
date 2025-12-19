@@ -38,6 +38,10 @@ public class IssueWorklog {
     @Column(columnDefinition = "JSONB")
     private JsonNode updateAuthor;
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private Users user;
+
     @Transient
     private JsonNode rawResponse;
 

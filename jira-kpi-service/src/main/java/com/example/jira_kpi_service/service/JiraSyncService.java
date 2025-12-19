@@ -2,11 +2,16 @@ package com.example.jira_kpi_service.service;
 
 import com.example.jira_kpi_service.client.JiraClient;
 import com.example.jira_kpi_service.entity.*;
+import com.example.jira_kpi_service.model.DomainExtractDTO;
+import com.example.jira_kpi_service.model.UserData;
+import com.example.jira_kpi_service.model.WorklogResponse;
 import com.example.jira_kpi_service.repository.*;
+import com.example.jira_kpi_service.util.JiraMapperUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +21,10 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,7 @@ public class JiraSyncService {
     private final IssueStatusHistoryRepository statusHistoryRepository;
     private final VendorRepository vendorRepository;
     private final IssueWorklogRepository issueWorklogRepository;
+    private final UsersRepository usersRepository;
 
     @Value("${jira.project-keys:PROJ1,PROJ2}")
     private String jiraProjectKeys;
@@ -50,6 +55,7 @@ public class JiraSyncService {
         syncInternal(since);
     }
 
+    @Transactional
     private void syncInternal(Instant updatedAfter) {
 //        String BASE_JQL = """
 //        project IN (%s)
@@ -57,7 +63,7 @@ public class JiraSyncService {
 //        AND statusCategory IN (Done, "In Progress")
 //        """.formatted(String.join(",",  jiraProjectKeys));
         String BASE_JQL = """
-                project IN (%s)
+                project IN (%s) AND updated >= startOfMonth(-1) AND updated < startOfMonth()
                 """.formatted(String.join(",", jiraProjectKeys));
 
         List<JsonNode> rawIssues = jiraClient.searchIssues(BASE_JQL, updatedAfter);
@@ -69,18 +75,33 @@ public class JiraSyncService {
                 String issueKey = rawIssue.get("key").asText();
                 JsonNode fields = rawIssue;
 
-                // 1. Save raw payload (immutable audit trail)
                 JiraRaw jiraRaw = saveRawPayload(issueKey, rawIssue, "GET_ISSUE");
 
-                // 2. Normalize + upsert issue
                 JiraIssue jiraIssue = normalizeIssue(issueKey, fields, jiraRaw.getId());
                 jiraIssue = jiraIssueRepository.save(jiraIssue);
 
-                List<IssueWorklog> issueWorklogs = jiraClient.getWorklogsForIssueAsEntities(jiraIssue);
+                WorklogResponse issueWorklogs = jiraClient.getWorklogsForIssueAsEntities(jiraIssue);
+
+                JiraIssue finalJiraIssue = jiraIssue;
+
+
                 JsonNode rawResponse = null;
-                if(!issueWorklogs.isEmpty()) {
-                    rawResponse = issueWorklogs.getFirst().getRawResponse();
-                    issueWorklogRepository.saveAll(issueWorklogs);
+                if(!issueWorklogs.getWorklogs().isEmpty()) {
+                    rawResponse = issueWorklogs.getRawJson();
+
+                    List<String> accountIdsForWorklogs = issueWorklogs.getWorklogs().stream()
+                            .map(wl -> wl.getAuthor().get("accountId").toString()).toList();
+
+                    List<Users> users = resolveUsersByAccountIds(accountIdsForWorklogs);
+
+                    Map<String, Users> usersMap = users.stream().collect(Collectors.toMap(Users::getAccountId, u -> u));
+
+                    List<IssueWorklog> worklogs = issueWorklogs.getWorklogs().stream()
+                            .map(wl -> {
+                                Users user = usersMap.getOrDefault(wl.getAuthor().get("accountId").toString(), null);
+                                return JiraMapperUtils.mapToIssueWorklog(wl, finalJiraIssue, user);
+                            }).toList();
+                    issueWorklogRepository.saveAll(worklogs);
                 }
                 if(rawResponse != null) {
                     JiraRaw jiraRawWorklog = saveRawPayload(issueKey, rawResponse, "GET_ISSUE_WORKLOG");
@@ -100,6 +121,7 @@ public class JiraSyncService {
 
         log.info("Jira sync completed: {} issues processed", counter.get());
     }
+
 
     private JiraRaw saveRawPayload(String issueKey, com.fasterxml.jackson.databind.JsonNode payload, String fetchType) {
         JiraRaw raw = jiraRawRepository.findByIssueKeyAndFetchType(issueKey, fetchType)
@@ -139,13 +161,13 @@ public class JiraSyncService {
         }
 
         // Vendor extraction
-        String vendorName = "Vendor";
-
-        Vendor vendor = vendorName != null ?
-                vendorRepository.findByNameIgnoreCase(vendorName)
-                        .orElseGet(() -> createOrGetVendor(vendorName)) : null;
-
-        issue.setVendor(vendor);
+//        String vendorName = "Vendor";
+//
+//        Vendor vendor = vendorName != null ?
+//                vendorRepository.findByNameIgnoreCase(vendorName)
+//                        .orElseGet(() -> createOrGetVendor(vendorName)) : null;
+//
+//        issue.setVendor(vendor);
 
         // Labels
         Set<String> labels = new HashSet<>();
@@ -267,7 +289,7 @@ public class JiraSyncService {
         } catch (DateTimeParseException e) {
             log.error("error parsing date time: {}", e.getMessage());
             try {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-Mm-dd");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 return OffsetDateTime.parse(node.asText(), formatter).toInstant();
             } catch (DateTimeParseException ex) {
                 return Instant.now();
@@ -302,5 +324,48 @@ public class JiraSyncService {
 
     private boolean isDone(String status) {
         return status != null && (status.toLowerCase().contains("done") || status.toLowerCase().contains("closed"));
+    }
+
+    @Transactional
+    public List<Users> resolveUsersByAccountIds(List<String> accountIds) {
+
+        // 1. Deduplicate input
+        Set<String> uniqueAccountIds = new HashSet<>(accountIds);
+
+        // 2. Fetch already existing users
+        List<Users> existingUsers =
+                usersRepository.findByAccountIdIn(uniqueAccountIds);
+
+        Map<String, Users> existingByAccountId =
+                existingUsers.stream()
+                        .collect(Collectors.toMap(
+                                Users::getAccountId,
+                                Function.identity()
+                        ));
+
+        // 3. Find missing accountIds
+        List<String> missingAccountIds = uniqueAccountIds.stream()
+                .filter(id -> !existingByAccountId.containsKey(id))
+                .toList();
+
+        // 4. Fetch missing users from Jira
+        List<Users> newUsers = Collections.emptyList();
+
+        if (!missingAccountIds.isEmpty()) {
+            List<UserData> jiraUsers =
+                    jiraClient.getBulkUsers(missingAccountIds);
+
+            newUsers = jiraUsers.stream()
+                    .map(JiraMapperUtils::mapToUserEntity)
+                    .toList();
+
+            usersRepository.saveAll(newUsers);
+        }
+
+        // 5. Merge and return
+        List<Users> result = new ArrayList<>(existingUsers);
+        result.addAll(newUsers);
+
+        return result;
     }
 }
