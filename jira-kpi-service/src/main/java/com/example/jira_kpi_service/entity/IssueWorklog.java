@@ -42,7 +42,4 @@ public class IssueWorklog {
     @JoinColumn(name = "user_id")
     private Users user;
 
-    @Transient
-    private JsonNode rawResponse;
-
 }

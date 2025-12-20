@@ -2,7 +2,6 @@ package com.example.jira_kpi_service.service;
 
 import com.example.jira_kpi_service.client.JiraClient;
 import com.example.jira_kpi_service.entity.*;
-import com.example.jira_kpi_service.model.DomainExtractDTO;
 import com.example.jira_kpi_service.model.UserData;
 import com.example.jira_kpi_service.model.WorklogResponse;
 import com.example.jira_kpi_service.repository.*;
@@ -11,7 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -94,7 +92,7 @@ public class JiraSyncService {
 
                     List<Users> users = resolveUsersByAccountIds(accountIdsForWorklogs);
 
-                    Map<String, Users> usersMap = users.stream().collect(Collectors.toMap(Users::getAccountId, u -> u));
+                    Map<String, Users> usersMap = users.stream().collect(Collectors.toMap(Users::getJiraAccountId, u -> u));
 
                     List<IssueWorklog> worklogs = issueWorklogs.getWorklogs().stream()
                             .map(wl -> {
@@ -287,7 +285,6 @@ public class JiraSyncService {
 
             return OffsetDateTime.parse(node.asText(), formatter).toInstant();
         } catch (DateTimeParseException e) {
-            log.error("error parsing date time: {}", e.getMessage());
             try {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 return OffsetDateTime.parse(node.asText(), formatter).toInstant();
@@ -334,12 +331,12 @@ public class JiraSyncService {
 
         // 2. Fetch already existing users
         List<Users> existingUsers =
-                usersRepository.findByAccountIdIn(uniqueAccountIds);
+                usersRepository.findByJiraAccountIdIn(uniqueAccountIds);
 
         Map<String, Users> existingByAccountId =
                 existingUsers.stream()
                         .collect(Collectors.toMap(
-                                Users::getAccountId,
+                                Users::getJiraAccountId,
                                 Function.identity()
                         ));
 

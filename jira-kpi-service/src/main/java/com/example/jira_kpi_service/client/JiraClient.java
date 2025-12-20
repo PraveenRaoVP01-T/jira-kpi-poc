@@ -37,7 +37,7 @@ public class JiraClient implements IJiraClient {
 
 //    @Value("")
 
-    private static final int MAX_RESULTS = 5;
+    private static final int MAX_RESULTS = 15;
     private static final String SEARCH_ENDPOINT = "/rest/api/3/search/jql";
     private static final String ISSUE_ENDPOINT = "/rest/api/3/issue/{issueKey}";
     private static final String ISSUE_WORKLOG_ENDPOINT = "/rest/api/3/issue/{issueKey}/worklog";
@@ -56,16 +56,17 @@ public class JiraClient implements IJiraClient {
      */
     public List<JsonNode> searchIssues(String jql, Instant updatedAfter) {
         String formattedUpdatedAfter = null;
-        if(updatedAfter != null) {
-            formattedUpdatedAfter = toJqlTimeFormat(updatedAfter);
-        }
+//        if(updatedAfter != null) {
+//            formattedUpdatedAfter = toJqlTimeFormat(updatedAfter);
+//        }
 //        else {
 //            formattedUpdatedAfter = toJqlTimeFormat(Instant.now().minus(3, ChronoUnit.DAYS));
 //        }
 
-        String finalJql = formattedUpdatedAfter != null
-                ? "(" + jql + ")"
-                : jql;
+//        String finalJql = formattedUpdatedAfter != null
+//                ? "(" + jql + ")"
+//                : jql;
+        String finalJql = jql;
 
         log.info("Starting Jira search with JQL: {} & fields: {} & expand: {}", finalJql, FIELDS, EXPAND);
 
@@ -95,9 +96,9 @@ public class JiraClient implements IJiraClient {
             });
             if(!isLast) {
                 log.info("Fetched {} issues...", allIssues.size());
-                if(allIssues.size() > 100) {
-                    isLast = true;
-                }
+//                if(allIssues.size() > 100) {
+//                    isLast = true;
+//                }
             }
         } while(!isLast);
 

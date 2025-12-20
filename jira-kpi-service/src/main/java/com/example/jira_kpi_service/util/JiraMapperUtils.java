@@ -8,7 +8,6 @@ import com.example.jira_kpi_service.model.UserData;
 import com.example.jira_kpi_service.model.WorklogResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -60,13 +59,12 @@ public class JiraMapperUtils {
 
         DomainExtractDTO domainDetails = getDomainDetailsFromEmail(userData.getEmailAddress());
         return Users.builder()
-                .accountId(userData.getAccountId())
-                .displayName(userData.getDisplayName())
-                .emailAddress(userData.getEmailAddress())
-                .isActive(userData.isActive())
-                .domainName(domainDetails.getDomainName())
-                .groupName(domainDetails.getGroupName())
-                .avatarUrls(objectMapper.valueToTree(userData.getAvatarUrls()))
+                .jiraAccountId(userData.getAccountId())
+                .jiraDisplayName(userData.getDisplayName())
+                .jiraEmailAddress(userData.getEmailAddress())
+                .isActiveInJira(userData.isActive())
+                .emailDomainName(domainDetails.getDomainName())
+                .jiraAvatarUrls(objectMapper.valueToTree(userData.getAvatarUrls()))
                 .build();
     }
 

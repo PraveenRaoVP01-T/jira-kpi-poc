@@ -1,5 +1,6 @@
 package com.example.jira_kpi_service.controller;
 
+import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.example.jira_kpi_service.model.MonthlyAnalyticsResponse;
 import com.example.jira_kpi_service.service.AnalyticsService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -26,5 +29,21 @@ public class KpiController {
             @RequestParam(defaultValue = "2025") Integer year
     ) {
         return ResponseEntity.ok(analyticsService.getMonthlyAnalytics(year, month));
+    }
+
+    @GetMapping("/get/issue/types")
+    public ResponseEntity<List<String>> getIssueTypes() {
+        return ResponseEntity.ok(analyticsService.getIssueTypes());
+    }
+
+    @GetMapping("/sda")
+    public MonthlyAnalyticsResponse getAnalytics(
+            @RequestParam SDAEnum jiraSda,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) String issueType) {
+
+        return analyticsService.getSdaAnalytics(
+                jiraSda, year, month, issueType);
     }
 }

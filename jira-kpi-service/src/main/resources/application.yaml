@@ -23,12 +23,14 @@ jira:
   base-url: ${{ JIRA_BASE-URL }}
   username: ${{ JIRA_USERNAME }}
   token: ${{ JIRA_TOKEN }}
-  project-keys: ${{ JIRA_PROJECT-KEYS }}
+#  project-keys: ${{ JIRA_PROJECT-KEYS }}
+  project-keys: SIDH #only one project in jira
 elastic:
   host: localhost
   port: 9200
 
 scheduler:
   full-sync-cron: "0 2 * * * SAT"      # weekly full refresh
-  incremental-cron: "0 */1 * * * *" # every 30 min
+  incremental-cron: "0 2 * * * SAT" # every 30 min
+#  incremental-cron: "0 * * * * *"
   kpi-calc-cron: "0 4 * * * *"         # 4 AM daily

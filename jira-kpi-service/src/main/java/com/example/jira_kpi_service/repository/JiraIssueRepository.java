@@ -1,6 +1,7 @@
 package com.example.jira_kpi_service.repository;
 
 import com.example.jira_kpi_service.entity.JiraIssue;
+import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.example.jira_kpi_service.model.GroupWeekIssueDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,13 +39,13 @@ public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long> {
     @Query("SELECT COUNT(i) FROM JiraIssue i WHERE i.vendor.id = :vendorId AND i.status NOT IN ('Done', 'Closed')")
     Long countCurrentWipByVendor(@Param("vendorId") UUID vendorId);
 
-
-
+    @Query("SELECT DISTINCT(i.issuetype) FROM JiraIssue i")
+    List<String> findUniqueIssueTypes();
 
 
     @Query("""
         SELECT new com.example.jira_kpi_service.model.GroupWeekIssueDTO(
-            u.groupName,
+            u.jiraSDA,
             (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1,
             COUNT(DISTINCT i.id)
         )
@@ -53,11 +54,33 @@ public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long> {
         JOIN Users u ON w.user = u
         WHERE i.resolutionDate >= :start
           AND i.resolutionDate < :end
-        GROUP BY u.groupName, (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1
+        GROUP BY u.jiraSDA, (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1
     """)
     List<GroupWeekIssueDTO> getIssueCountsPerGroupPerWeek(
             Instant start,
             Instant end
+    );
+
+    @Query("""
+    SELECT new com.example.jira_kpi_service.model.GroupWeekIssueDTO(
+        u.jiraSDA,
+        (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1,
+        COUNT(DISTINCT i.id)
+    )
+    FROM JiraIssue i
+    JOIN IssueWorklog w ON w.jiraIssue = i
+    JOIN Users u ON w.user = u
+    WHERE u.jiraSDA = :jiraSda
+      AND i.resolutionDate >= :start
+      AND i.resolutionDate < :end
+      AND (:issueType IS NULL OR i.issuetype = :issueType)
+    GROUP BY u.jiraSDA, (CAST(EXTRACT(DAY FROM i.resolutionDate) AS int) - 1) / 7 + 1
+""")
+    List<GroupWeekIssueDTO> getWeeklyIssueCountsForSda(
+            SDAEnum jiraSda,
+            Instant start,
+            Instant end,
+            String issueType
     );
 
 

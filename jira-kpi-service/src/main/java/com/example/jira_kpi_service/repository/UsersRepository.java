@@ -9,5 +9,5 @@ import java.util.Set;
 
 @Repository
 public interface UsersRepository extends JpaRepository<Users, Long> {
-    List<Users> findByAccountIdIn(Set<String> uniqueAccountIds);
+    List<Users> findByJiraAccountIdIn(Set<String> uniqueAccountIds);
 }

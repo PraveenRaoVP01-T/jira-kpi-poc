@@ -1,5 +1,7 @@
 package com.example.jira_kpi_service.entity;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
+import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -18,14 +20,23 @@ public class Users {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String accountId;
-    private String displayName;
-    private String emailAddress;
-    private boolean isActive;
-    private String domainName;
-    private String groupName;
+    @Column(name = "jira_account_id", unique = true)
+    private String jiraAccountId;
+    private String jiraDisplayName;
+    private String jiraEmailAddress;
+    private boolean isActiveInJira;
+
+    private String jiraProjectName = "SIDH";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSONB")
-    private JsonNode avatarUrls;
+    private JsonNode jiraAvatarUrls;
+    
+    private String emailDomainName; // to segregate reports SDA-wise
+
+    @Enumerated(EnumType.STRING)
+    private ProjectNameEnum assignedProjectName; // (assigned manually) one SDA has multiple projects like NAPS, ITI, etc. This will help us to filter as per project assigned to SDA
+
+    @Enumerated(EnumType.STRING)
+    private SDAEnum jiraSDA; // assigned manually in master table based on email domain
 }
