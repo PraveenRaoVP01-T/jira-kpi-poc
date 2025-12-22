@@ -27,10 +27,6 @@ public class JiraIssue {
     @Column(name = "issue_key", nullable = false, unique = true, length = 50)
     private String issueKey;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendor_id")
-    private Vendor vendor;
-
     @Column(name = "project_key")
     private String projectKey; // eg. PROJ-1234
 

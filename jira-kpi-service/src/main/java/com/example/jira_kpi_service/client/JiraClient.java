@@ -1,8 +1,6 @@
 package com.example.jira_kpi_service.client;
 
-import com.example.jira_kpi_service.entity.IssueWorklog;
 import com.example.jira_kpi_service.entity.JiraIssue;
-import com.example.jira_kpi_service.entity.Users;
 import com.example.jira_kpi_service.model.BulkUserResponse;
 import com.example.jira_kpi_service.model.UserData;
 import com.example.jira_kpi_service.model.WorklogResponse;
@@ -19,11 +17,9 @@ import reactor.util.retry.Retry;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -39,7 +35,6 @@ public class JiraClient implements IJiraClient {
 
     private static final int MAX_RESULTS = 15;
     private static final String SEARCH_ENDPOINT = "/rest/api/3/search/jql";
-    private static final String ISSUE_ENDPOINT = "/rest/api/3/issue/{issueKey}";
     private static final String ISSUE_WORKLOG_ENDPOINT = "/rest/api/3/issue/{issueKey}/worklog";
     private static final String GET_BULK_USERS = "/rest/api/3/user/bulk";
 

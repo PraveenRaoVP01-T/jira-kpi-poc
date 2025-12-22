@@ -6,19 +6,19 @@ import lombok.Getter;
 @Getter
 public enum SDAEnum {
     CYBERSURF("Cybersurf"),
-    SIDH_SAPIENT("SIDH-Sapient"),
+    SIDH_SAPIENT("SIDH-Sapient"), // n
     DRC("DRC"),
     HAPTIK("Haptik"),
     ML_INFO("ML Info"),
     TEKDI("Tekdi"),
-    TARENTO("Tarento"),
+    TARENTO("Tarento"), // n
     TNT("TNT"),
-    EY("EY"),
-    DELOITTE("Deloitte"),
-    PWC("PwC"),
-    NSDC("NSDC"),
-    GL("GL"),
-    DAFFODIL("Daffodil")
+    EY("EY"), // n
+    DELOITTE("Deloitte"), // n
+    PWC("PwC"), // n
+    NSDC("NSDC"), // n
+    GL("GL"), // n
+    DAFFODIL("Daffodil") // n
     ;
 
     private final String value;

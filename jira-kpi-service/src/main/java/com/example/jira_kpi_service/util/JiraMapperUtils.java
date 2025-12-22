@@ -70,7 +70,7 @@ public class JiraMapperUtils {
 
     private static DomainExtractDTO getDomainDetailsFromEmail(String email) {
         if(email == null) {
-            return new DomainExtractDTO("nsdc.org", "nsdc");
+            return new DomainExtractDTO();
         }
 
         String domain = email.substring(email.indexOf('@') + 1);

@@ -33,7 +33,6 @@ public class JiraSyncService {
     private final JiraRawRepository jiraRawRepository;
     private final JiraIssueRepository jiraIssueRepository;
     private final IssueStatusHistoryRepository statusHistoryRepository;
-    private final VendorRepository vendorRepository;
     private final IssueWorklogRepository issueWorklogRepository;
     private final UsersRepository usersRepository;
 
@@ -292,17 +291,6 @@ public class JiraSyncService {
                 return Instant.now();
             }
         }
-    }
-
-    private Vendor createOrGetVendor(String name) {
-        return vendorRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> {
-                    Vendor v = new Vendor();
-                    v.setName(name);
-                    v.setShortCode(name.substring(0, Math.min(10, name.length())).toUpperCase());
-                    v.setActive(true);
-                    return vendorRepository.save(v);
-                });
     }
 
     private String categorizeStatus(String status) {

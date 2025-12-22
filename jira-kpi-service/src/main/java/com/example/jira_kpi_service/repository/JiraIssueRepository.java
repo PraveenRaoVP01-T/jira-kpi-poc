@@ -18,15 +18,7 @@ import java.util.UUID;
 public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long> {
     Optional<JiraIssue> findByIssueKey(String issueKey);
 
-    @Query("""
-        SELECT i FROM JiraIssue i 
-        WHERE i.vendor.id = :vendorId 
-          AND i.resolutionDate >= :start 
-          AND i.resolutionDate < :end
-        """)
-    List<JiraIssue> findCompletedInPeriod(@Param("vendorId") UUID vendorId,
-                                          @Param("start") Instant start,
-                                          @Param("end") Instant end);
+
 
     @Query("""
         SELECT i FROM JiraIssue i 
@@ -36,9 +28,6 @@ public interface JiraIssueRepository extends JpaRepository<JiraIssue, Long> {
         """)
     List<JiraIssue> findDefectsInPeriod(@Param("start") Instant start,
                                         @Param("end") Instant end);
-
-    @Query("SELECT COUNT(i) FROM JiraIssue i WHERE i.vendor.id = :vendorId AND i.status NOT IN ('Done', 'Closed')")
-    Long countCurrentWipByVendor(@Param("vendorId") UUID vendorId);
 
     @Query("SELECT DISTINCT(i.issuetype) FROM JiraIssue i")
     List<String> findUniqueIssueTypes();
