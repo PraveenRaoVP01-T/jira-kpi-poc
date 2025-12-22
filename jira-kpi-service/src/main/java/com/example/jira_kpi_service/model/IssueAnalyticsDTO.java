@@ -17,6 +17,7 @@ public class IssueAnalyticsDTO {
     private String issueType;
     private String projectKey;
     private long totalTimeSpentSeconds;
+    private String totalTimeSpent;
 
     private List<UserWorklogAnalyticsDTO> users;
 }

@@ -35,7 +35,7 @@ public class VendorKpiCalculationService {
     private final ElasticsearchIndexingService esService;
 
     // Run every day at 4:30 AM → after incremental sync
-    @Scheduled(cron = "${scheduler.kpi-calc-cron}")
+//    @Scheduled(cron = "${scheduler.kpi-calc-cron}")
     @Transactional
     public void calculateDailyKpis() throws IOException {
         LocalDate yesterday = LocalDate.now().minusDays(1);

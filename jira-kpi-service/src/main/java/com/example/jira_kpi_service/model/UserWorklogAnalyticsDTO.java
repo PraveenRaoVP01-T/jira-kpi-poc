@@ -1,5 +1,6 @@
 package com.example.jira_kpi_service.model;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,8 @@ public class UserWorklogAnalyticsDTO {
     private String emailAddress;
 
     private String groupName;
+    private ProjectNameEnum assignedProjectName;
 
     private long timeSpentSeconds;
+    private String timeSpent;
 }

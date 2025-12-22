@@ -79,4 +79,26 @@ public class JiraMapperUtils {
         return new DomainExtractDTO(domain, groupName);
 
     }
+
+    public static String formatDuration(long seconds) {
+        if (seconds <= 0) return "0s";
+
+        long days = seconds / 86400;
+        seconds %= 86400;
+
+        long hours = seconds / 3600;
+        seconds %= 3600;
+
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder result = new StringBuilder();
+
+        if (days > 0) result.append(days).append("d ");
+        if (hours > 0) result.append(hours).append("h ");
+        if (minutes > 0) result.append(minutes).append("m ");
+        if (seconds > 0) result.append(seconds).append("s ");
+
+        return result.toString().trim();
+    }
 }

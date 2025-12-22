@@ -1,5 +1,6 @@
 package com.example.jira_kpi_service.controller;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.example.jira_kpi_service.model.MonthlyAnalyticsResponse;
 import com.example.jira_kpi_service.service.AnalyticsService;
@@ -39,11 +40,12 @@ public class KpiController {
     @GetMapping("/sda")
     public MonthlyAnalyticsResponse getAnalytics(
             @RequestParam SDAEnum jiraSda,
+            @RequestParam(required = false) ProjectNameEnum assignedProjectName,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) String issueType) {
 
         return analyticsService.getSdaAnalytics(
-                jiraSda, year, month, issueType);
+                jiraSda, year, month, issueType, assignedProjectName);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.jira_kpi_service.repository;
 
 import com.example.jira_kpi_service.entity.IssueWorklog;
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.example.jira_kpi_service.model.IssueUserTimeSpentDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,14 +24,15 @@ public interface IssueWorklogRepository extends JpaRepository<IssueWorklog, Long
             u.jiraSDA,
             i.issuetype,
             i.projectKey,
-            SUM(w.timeSpentSeconds)
+            SUM(w.timeSpentSeconds),
+            u.assignedProjectName
         )
         FROM IssueWorklog w
         JOIN w.jiraIssue i
         JOIN w.user u
         WHERE i.resolutionDate >= :start
           AND i.resolutionDate < :end
-        GROUP BY i.issueKey, u.jiraAccountId, u.jiraDisplayName, u.jiraEmailAddress, u.jiraSDA, i.issuetype, i.projectKey
+        GROUP BY i.issueKey, u.jiraAccountId, u.jiraDisplayName, u.jiraEmailAddress, u.jiraSDA, i.issuetype, i.projectKey, u.assignedProjectName
     """)
     List<IssueUserTimeSpentDTO> getTimeSpentPerIssuePerUser(
             Instant start,
@@ -46,24 +48,27 @@ public interface IssueWorklogRepository extends JpaRepository<IssueWorklog, Long
             u.jiraSDA,
             i.issuetype,
             i.projectKey,
-            SUM(w.timeSpentSeconds)
+            SUM(w.timeSpentSeconds),
+            u.assignedProjectName
         )
         FROM IssueWorklog w
         JOIN w.jiraIssue i
         JOIN w.user u
         WHERE u.jiraSDA = :jiraSda
+          AND (:assignedProjectName IS NULL OR u.assignedProjectName = :assignedProjectName)
           AND i.resolutionDate >= :start
           AND i.resolutionDate < :end
           AND (:issueType IS NULL OR i.issuetype = :issueType)
         GROUP BY
             i.issueKey, i.issuetype, i.projectKey,
             u.jiraAccountId, u.jiraDisplayName,
-            u.jiraEmailAddress, u.jiraSDA
+            u.jiraEmailAddress, u.jiraSDA, u.assignedProjectName
     """)
     List<IssueUserTimeSpentDTO> getSdaIssueWorklogs(
             SDAEnum jiraSda,
             Instant start,
             Instant end,
-            String issueType
+            String issueType,
+            ProjectNameEnum assignedProjectName
     );
 }

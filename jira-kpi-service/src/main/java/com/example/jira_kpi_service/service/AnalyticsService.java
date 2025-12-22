@@ -1,12 +1,13 @@
 package com.example.jira_kpi_service.service;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import com.example.jira_kpi_service.model.*;
 import com.example.jira_kpi_service.repository.IssueWorklogRepository;
 import com.example.jira_kpi_service.repository.JiraIssueRepository;
+import com.example.jira_kpi_service.util.JiraMapperUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -32,7 +33,11 @@ public class AnalyticsService {
         List<IssueUserTimeSpentDTO> userEfforts =
                 issueWorklogRepository.getTimeSpentPerIssuePerUser(monthStart, monthEnd);
 
-        return buildResponse(year, month, issueCounts, userEfforts);
+        int totalResolvedIssues = jiraIssueRepository.totalIssuesResolved(monthStart, monthEnd);
+
+        MonthlyAnalyticsResponse response = buildResponse(year, month, issueCounts, userEfforts);
+        response.setTotalResolvedIssues(totalResolvedIssues);
+        return response;
     }
 
     private WeeklyAnalyticsDTO findOrCreateWeek(
@@ -78,7 +83,7 @@ public class AnalyticsService {
 
         // 1️⃣ Populate issue counts
         for (GroupWeekIssueDTO dto : issueCounts) {
-
+            log.info("SDA Name: {}", dto.getGroupName());
             if(dto.getGroupName() == null) continue;
             GroupAnalyticsDTO group =
                     groupMap.computeIfAbsent(dto.getGroupName().getValue(), g -> {
@@ -120,11 +125,14 @@ public class AnalyticsService {
             user.setEmailAddress(dto.getEmailAddress());
             user.setGroupName(dto.getGroupName() == null ? "NSDC" : dto.getGroupName().getValue());
             user.setTimeSpentSeconds(dto.getTimeSpentSeconds());
+            user.setTimeSpent(JiraMapperUtils.formatDuration(dto.getTimeSpentSeconds()));
+            user.setAssignedProjectName(dto.getAssignedProjectName());
 
             issue.getUsers().add(user);
             issue.setTotalTimeSpentSeconds(
                     issue.getTotalTimeSpentSeconds() + dto.getTimeSpentSeconds()
             );
+            issue.setTotalTimeSpent(JiraMapperUtils.formatDuration(issue.getTotalTimeSpentSeconds()));
         }
 
         // 3️⃣ Attach issues to weekly buckets by group
@@ -144,7 +152,7 @@ public class AnalyticsService {
         return jiraIssueRepository.findUniqueIssueTypes();
     }
 
-    public MonthlyAnalyticsResponse getSdaAnalytics(SDAEnum jiraSda, Integer year, Integer month, String issueType) {
+    public MonthlyAnalyticsResponse getSdaAnalytics(SDAEnum jiraSda, Integer year, Integer month, String issueType, ProjectNameEnum assignedProjectName) {
         int resolvedYear = (year != null) ? year : 2025;
         int resolvedMonth = (month != null) ? month : 11;
 
@@ -153,19 +161,24 @@ public class AnalyticsService {
 
         List<GroupWeekIssueDTO> weeklyCounts =
                 jiraIssueRepository.getWeeklyIssueCountsForSda(
-                        jiraSda, start, end, issueType);
+                        jiraSda, start, end, issueType, assignedProjectName);
 
         List<IssueUserTimeSpentDTO> worklogs =
                 issueWorklogRepository.getSdaIssueWorklogs(
-                        jiraSda, start, end, issueType);
+                        jiraSda, start, end, issueType, assignedProjectName);
 
-        return buildSdaResponse(
+        int totalIssuesResolved = jiraIssueRepository.totalIssuesResolved(start, end);
+
+        MonthlyAnalyticsResponse montlyAnalyticsResposne = buildSdaResponse(
                 jiraSda,
                 resolvedYear,
                 resolvedMonth,
                 weeklyCounts,
                 worklogs
         );
+
+        montlyAnalyticsResposne.setTotalResolvedIssues(totalIssuesResolved);
+        return montlyAnalyticsResposne;
     }
 
     private MonthlyAnalyticsResponse buildSdaResponse(SDAEnum jiraSda, int resolvedYear, int resolvedMonth, List<GroupWeekIssueDTO> weeklyCounts, List<IssueUserTimeSpentDTO> worklogs) {
@@ -218,11 +231,14 @@ public class AnalyticsService {
             user.setEmailAddress(dto.getEmailAddress());
             user.setGroupName(dto.getGroupName().getValue());
             user.setTimeSpentSeconds(dto.getTimeSpentSeconds());
+            user.setTimeSpent(JiraMapperUtils.formatDuration(dto.getTimeSpentSeconds()));
+            user.setAssignedProjectName(dto.getAssignedProjectName());
 
             issue.getUsers().add(user);
             issue.setTotalTimeSpentSeconds(
                     issue.getTotalTimeSpentSeconds() + dto.getTimeSpentSeconds()
             );
+            issue.setTotalTimeSpent(JiraMapperUtils.formatDuration(issue.getTotalTimeSpentSeconds()));
         }
 
         /* -----------------------------
@@ -243,6 +259,8 @@ public class AnalyticsService {
                         .sorted(Comparator.comparingInt(WeeklyAnalyticsDTO::getWeekOfMonth))
                         .toList()
         );
+        response.setTotalIssuesResolvedBySda((int) response.getWeeklyBreakdown().stream().mapToLong(WeeklyAnalyticsDTO::getIssuesResolved).sum());
+
 
         return response;
     }

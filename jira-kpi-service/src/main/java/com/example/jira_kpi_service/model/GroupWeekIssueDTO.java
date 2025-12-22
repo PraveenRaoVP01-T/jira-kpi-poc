@@ -1,5 +1,6 @@
 package com.example.jira_kpi_service.model;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,4 +15,5 @@ public class GroupWeekIssueDTO {
     private SDAEnum groupName;
     private int weekOfMonth;
     private long issueCount;
+    private ProjectNameEnum assignedProjectName;
 }

@@ -16,6 +16,10 @@ public class MonthlyAnalyticsResponse {
     private int year;
     private int month;
 
+    private int totalIssuesResolvedBySda;
+
+    private int totalResolvedIssues;
+
     private SDAEnum jiraSda;
 
     private List<GroupAnalyticsDTO> groups;

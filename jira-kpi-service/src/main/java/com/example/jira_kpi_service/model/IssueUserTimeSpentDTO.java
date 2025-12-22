@@ -1,5 +1,6 @@
 package com.example.jira_kpi_service.model;
 
+import com.example.jira_kpi_service.entity.enums.ProjectNameEnum;
 import com.example.jira_kpi_service.entity.enums.SDAEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +23,5 @@ public class IssueUserTimeSpentDTO {
     private String projectKey;
 
     private long timeSpentSeconds;
+    private ProjectNameEnum assignedProjectName;
 }
