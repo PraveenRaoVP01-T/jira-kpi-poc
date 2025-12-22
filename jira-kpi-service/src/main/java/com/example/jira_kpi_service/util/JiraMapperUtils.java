@@ -64,7 +64,6 @@ public class JiraMapperUtils {
                 .jiraEmailAddress(userData.getEmailAddress())
                 .isActiveInJira(userData.isActive())
                 .emailDomainName(domainDetails.getDomainName())
-                .jiraAvatarUrls(objectMapper.valueToTree(userData.getAvatarUrls()))
                 .build();
     }
 

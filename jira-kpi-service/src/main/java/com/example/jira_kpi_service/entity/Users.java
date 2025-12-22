@@ -20,17 +20,14 @@ public class Users {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "jira_account_id", unique = true)
+    @Column(name = "jira_account_id", unique = true, nullable = false)
     private String jiraAccountId;
+    @Column(name = "jira_display_name", unique = true, nullable = false)
     private String jiraDisplayName;
     private String jiraEmailAddress;
     private boolean isActiveInJira;
 
     private String jiraProjectName = "SIDH";
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "JSONB")
-    private JsonNode jiraAvatarUrls;
     
     private String emailDomainName; // to segregate reports SDA-wise
 

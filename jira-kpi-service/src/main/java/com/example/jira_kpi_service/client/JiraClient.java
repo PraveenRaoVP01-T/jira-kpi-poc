@@ -33,7 +33,7 @@ public class JiraClient implements IJiraClient {
 
 //    @Value("")
 
-    private static final int MAX_RESULTS = 15;
+    private static final int MAX_RESULTS = 50;
     private static final String SEARCH_ENDPOINT = "/rest/api/3/search/jql";
     private static final String ISSUE_WORKLOG_ENDPOINT = "/rest/api/3/issue/{issueKey}/worklog";
     private static final String GET_BULK_USERS = "/rest/api/3/user/bulk";

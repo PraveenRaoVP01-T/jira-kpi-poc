@@ -17,7 +17,8 @@ public class JiraSyncScheduler {
     private final JiraSyncService jiraSyncService;
     private final SyncMetadataRepository metadataRepo;
 
-    @Scheduled(cron = "${scheduler.incremental-cron}")  // every 30 min
+//    @Scheduled(cron = "${scheduler.incremental-cron}")  // every 30 min
+    @Scheduled(cron = "0 * * * * *")
     public void incrementalSync() {
         log.info("Syncing...");
         SyncMetadata syncMetadata = metadataRepo.getLastIncrementalSync();

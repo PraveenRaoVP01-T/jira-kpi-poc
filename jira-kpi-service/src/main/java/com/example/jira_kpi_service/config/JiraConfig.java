@@ -34,7 +34,7 @@ public class JiraConfig {
                 .exchangeStrategies(ExchangeStrategies.builder()
                         .codecs(config -> config
                                 .defaultCodecs()
-                                .maxInMemorySize(10 * 1024 * 1024))
+                                .maxInMemorySize(15 * 1024 * 1024))
                         .build())
                 .build();
     }

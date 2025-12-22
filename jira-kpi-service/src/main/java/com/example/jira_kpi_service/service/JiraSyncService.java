@@ -60,7 +60,7 @@ public class JiraSyncService {
 //        AND statusCategory IN (Done, "In Progress")
 //        """.formatted(String.join(",",  jiraProjectKeys));
         String BASE_JQL = """
-                project IN (%s) AND updated >= startOfMonth(-1) AND updated < startOfMonth()
+                project IN (%s) AND worklogDate >= startOfMonth(-1) AND worklogDate < startOfMonth()
                 """.formatted(String.join(",", jiraProjectKeys));
 
         List<JsonNode> rawIssues = jiraClient.searchIssues(BASE_JQL, updatedAfter);
@@ -93,11 +93,23 @@ public class JiraSyncService {
 
                     Map<String, Users> usersMap = users.stream().collect(Collectors.toMap(Users::getJiraAccountId, u -> u));
 
+                    ZoneId IST = ZoneId.of("Asia/Kolkata");
+
+                    OffsetDateTime startOfNovember = LocalDate.of(2025,11,1)
+                            .atStartOfDay(IST)
+                            .toOffsetDateTime();
+                    OffsetDateTime startOfDecember =
+                            startOfNovember.plusMonths(1);
+
                     List<IssueWorklog> worklogs = issueWorklogs.getWorklogs().stream()
                             .map(wl -> {
                                 Users user = usersMap.getOrDefault(wl.getAuthor().get("accountId").toString(), null);
                                 return JiraMapperUtils.mapToIssueWorklog(wl, finalJiraIssue, user);
-                            }).toList();
+                            })
+                            .filter(wl ->
+                                    !wl.getStarted().isBefore(startOfNovember) &&
+                                            wl.getStarted().isBefore(startOfDecember))
+                            .toList();
                     issueWorklogRepository.saveAll(worklogs);
                 }
                 if(rawResponse != null) {
